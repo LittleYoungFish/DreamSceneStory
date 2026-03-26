@@ -52,7 +52,7 @@ def loadCam(args, id, cam_info, resolution_scale):
     resized_image_rgb = PILtoTorch(cam_info.image, resolution)
 
     gt_image = resized_image_rgb[:3, ...]
-    depth = estimate_depth(gt_image.cuda()).cpu().numpy() ### midas
+    depth = None # bypassed
     # depth = depth_anything(gt_image.cuda(), 'vits', model = model).cpu().numpy()
     loaded_mask = None
 

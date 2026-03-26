@@ -104,12 +104,16 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         render_pkg = render(viewpoint_cam, gaussians, pipe, bg)
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
         rendered_depth = render_pkg["depth"] ###
-        gt_depth = torch.tensor(viewpoint_cam.depth_image).cuda() ###
+        if viewpoint_cam.depth_image is not None:
+            gt_depth = torch.tensor(viewpoint_cam.depth_image).cuda() ###
+            loss_depth = depth_weight * (1 - pearson_corrcoef(rendered_depth.reshape(-1, 1)[:, 0], - gt_depth.reshape(-1, 1)[:, 0]))
+        else:
+            gt_depth = None
+            loss_depth = torch.tensor(0.0).cuda()
         gt_image = viewpoint_cam.original_image.cuda()
         Ll1 = l1_loss(image, gt_image)
 
         depth_weight = 0.05 #0.005  
-        loss_depth = depth_weight * (1 - pearson_corrcoef(rendered_depth.reshape(-1, 1)[:, 0], - gt_depth.reshape(-1, 1)[:, 0]))
         
         loss =  (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image)) + depth_weight * loss_depth
         loss_feature = torch.tensor(0).cuda() 
@@ -133,7 +137,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             perturbation_image, perturbation_rendered_depth= perturbation_render_pkg["render"], perturbation_render_pkg["depth"]
             ### perturbation depth loss
             pred_depth = estimate_depth(perturbation_image)
-            loss_perturbation_depth =   (1 - pearson_corrcoef(rendered_depth.reshape(-1, 1)[:, 0], - gt_depth.reshape(-1, 1)[:, 0]))
+            loss_perturbation_depth =   (1 - pearson_corrcoef(perturbation_rendered_depth.reshape(-1, 1)[:, 0], - pred_depth.reshape(-1, 1)[:, 0]))
 
             if torch.isnan(loss_perturbation_depth).sum() == 0:
                 loss += depth_weight * loss_perturbation_depth
