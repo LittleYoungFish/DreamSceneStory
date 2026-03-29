@@ -8,3 +8,4 @@ diff_rasterization/dist
 *.safetensors
 *.DS_Store
 data/
+story_pipeline/outputs/
